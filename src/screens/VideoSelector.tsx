@@ -133,7 +133,7 @@ function VideoSelector() {
         }
       } catch (error) {
         if (!isCancelled) {
-          const message = error instanceof Error ? error.message : 'Unable to load saved videos.'
+          const message = error instanceof Error ? error.message : 'Unable to load saved videos'
           setErrorMessage(message)
         }
       } finally {
@@ -163,7 +163,7 @@ function VideoSelector() {
     }
 
     if (!isMp4File(selectedFile)) {
-      setErrorMessage('Please choose an MP4 file.')
+      setErrorMessage('Please choose an MP4 file')
       return
     }
 
@@ -175,7 +175,7 @@ function VideoSelector() {
       const savedRecord = await saveVideoToGallery(selectedFile, { thumbnailDataUrl })
       setVideos((previousVideos) => [savedRecord, ...previousVideos])
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save the selected video.'
+      const message = error instanceof Error ? error.message : 'Unable to save the selected video'
       setErrorMessage(message)
     } finally {
       setIsSaving(false)
@@ -190,7 +190,7 @@ function VideoSelector() {
       await removeStoredVideo(videoId)
       setVideos((previousVideos) => previousVideos.filter((video) => video.id !== videoId))
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to remove this video.'
+      const message = error instanceof Error ? error.message : 'Unable to remove this video'
       setErrorMessage(message)
     } finally {
       setDeletingId(null)
@@ -205,7 +205,7 @@ function VideoSelector() {
       const updatedRecord = await updateStoredVideoTitle(videoId, title)
 
       if (!updatedRecord) {
-        setErrorMessage('Unable to find this video to update.')
+        setErrorMessage('Unable to find this video to update')
         return false
       }
 
@@ -214,7 +214,7 @@ function VideoSelector() {
       )))
       return true
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save this title.'
+      const message = error instanceof Error ? error.message : 'Unable to save this title'
       setErrorMessage(message)
       return false
     } finally {
@@ -232,7 +232,7 @@ function VideoSelector() {
                 <p className="mb-2 text-uppercase text-sm tracking-[0.2em] text-primary">Film Reviewer</p>
                 <h1 className="mb-2 text-3xl font-semibold text-slate-900">Video gallery</h1>
                 <p className="mb-0 text-slate-600">
-                  Upload films, keep them in your browser, and click any saved video to open it.
+                  Upload films, keep them in your browser, and click any saved video to open it
                 </p>
               </div>
               <div className="d-flex flex-column flex-sm-row gap-2">
@@ -258,7 +258,7 @@ function VideoSelector() {
             {isLoading ? (
               <p className="mb-0 text-slate-600">Loading saved videos...</p>
             ) : videos.length === 0 ? (
-              <p className="mb-0 text-slate-600">No videos saved yet. Upload one to get started.</p>
+              <p className="mb-0 text-slate-600">No videos saved yet - upload one to get started</p>
             ) : (
               <div className="row g-3">
                 {videos.map((video) => (

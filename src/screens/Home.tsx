@@ -14,7 +14,7 @@ function Home({ onSignIn, isSignedIn }: HomeProps) {
             <p className="mb-2 text-uppercase text-sm tracking-[0.2em] text-primary">Film Reviewer</p>
             <h1 className="mb-3 text-4xl font-semibold text-slate-900">Review your team film anywhere</h1>
             <p className="mx-auto mb-4 max-w-2xl text-base leading-7 text-slate-600">
-              Sign in to access your saved videos and open any clip from your gallery.
+              Sign in to access your saved videos and open any clip from your gallery
             </p>
 
             <SignInPanel isSignedIn={isSignedIn} onSignIn={onSignIn} />

@@ -118,7 +118,7 @@ function NoteComposerInner({
       setSelectedTagKeys([])
       onEventSaved(savedEvent)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save this event.'
+      const message = error instanceof Error ? error.message : 'Unable to save this event'
       setSubmitError(message)
     } finally {
       setIsSaving(false)
@@ -149,7 +149,7 @@ function NoteComposerInner({
       setSelectedTagKeys([])
       onEventSaved(savedEvent)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save this event.'
+      const message = error instanceof Error ? error.message : 'Unable to save this event'
       setSubmitError(message)
     } finally {
       setIsSaving(false)
@@ -175,7 +175,7 @@ function NoteComposerInner({
       ))
       setIsCreateTagModalOpen(false)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create this tag.'
+      const message = error instanceof Error ? error.message : 'Unable to create this tag'
       setSubmitError(message)
     } finally {
       setIsSaving(false)
@@ -198,14 +198,14 @@ function NoteComposerInner({
             value={text}
             onChange={(event) => setText(event.target.value)}
             onFocus={onStartComposing}
-            placeholder="Write your event note for this film moment."
+            placeholder="Add a note to your film at a specific moment"
           />
         </div>
 
         <div>
           <p className="form-label mb-2">Tags</p>
           {tagCatalog.length === 0 ? (
-            <p className="mb-0 text-sm text-slate-600">Create a global tag to start tagging events.</p>
+            <p className="mb-0 text-sm text-slate-600">Create a global tag to start tagging events</p>
           ) : (
             <div className="d-flex flex-wrap gap-2">
               {tagCatalog.map((tag) => {

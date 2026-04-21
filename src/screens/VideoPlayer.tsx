@@ -53,7 +53,7 @@ function VideoPlayer() {
 
     async function loadVideo() {
       if (!videoId) {
-        setErrorMessage('No video was selected.')
+        setErrorMessage('No video was selected')
         setIsLoading(false)
         return
       }
@@ -66,7 +66,7 @@ function VideoPlayer() {
         }
 
         if (!storedVideo) {
-          setErrorMessage('This video could not be found.')
+          setErrorMessage('This video could not be found')
           setVideoRecord(null)
           return
         }
@@ -74,7 +74,7 @@ function VideoPlayer() {
         setVideoRecord(storedVideo)
       } catch (error) {
         if (!isCancelled) {
-          const message = error instanceof Error ? error.message : 'Unable to open this video.'
+          const message = error instanceof Error ? error.message : 'Unable to open this video'
           setErrorMessage(message)
         }
       } finally {
@@ -113,7 +113,7 @@ function VideoPlayer() {
         }
       } catch (error) {
         if (!isCancelled) {
-          const message = error instanceof Error ? error.message : 'Unable to load video events.'
+          const message = error instanceof Error ? error.message : 'Unable to load video events'
           setErrorMessage(message)
         }
       }
@@ -254,9 +254,6 @@ function VideoPlayer() {
               <div>
                 <p className="mb-2 text-uppercase text-sm tracking-[0.2em] text-primary">Film Reviewer</p>
                 <h1 className="mb-2 text-3xl font-semibold text-slate-900">Video player</h1>
-                <p className="mb-0 text-slate-600">
-                  Review a saved clip with an event feed directly in the browser.
-                </p>
               </div>
 
               <div className="d-flex flex-column flex-sm-row gap-2">
@@ -291,7 +288,7 @@ function VideoPlayer() {
                       }}
                       onKeyDown={handleVideoKeyDown}
                     >
-                      Your browser does not support playing this video.
+                      Your browser does not support playing this video
                     </video>
                   </div>
 
@@ -360,7 +357,7 @@ function VideoPlayer() {
                         })}
                       </div>
                     ) : (
-                      <p className="mb-0 text-sm text-slate-600">No tags created yet.</p>
+                      <p className="mb-0 text-sm text-slate-600">No tags created yet</p>
                     )}
                   </section>
                   <NotesNowPlaying
@@ -384,7 +381,7 @@ function VideoPlayer() {
               </div>
             ) : (
               <div className="alert alert-warning mb-0" role="alert">
-                This video is unavailable. It may have been removed from your gallery.
+                This video is unavailable - it may have been removed from your gallery
               </div>
             )}
 

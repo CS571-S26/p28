@@ -65,7 +65,7 @@ function TagCreationModal({
         aria-labelledby="create-tag-modal-title"
       >
         <h3 id="create-tag-modal-title" className="h5 mb-2 text-slate-900">Create global tag</h3>
-        <p className="mb-3 text-slate-600">Choose a name and color for this reusable tag.</p>
+        <p className="mb-3 text-slate-600">Choose a name and color for this reusable tag</p>
         <TagCreationFields
           nameInputId="create-tag-name-modal"
           tagName={tagName}

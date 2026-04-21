@@ -90,7 +90,7 @@ function NotesList({
       })
       cancelEdit()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update this event.'
+      const message = error instanceof Error ? error.message : 'Unable to update this event'
       setActionError(message)
     } finally {
       setIsSavingEdit(false)
@@ -112,7 +112,7 @@ function NotesList({
         cancelEdit()
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete this event.'
+      const message = error instanceof Error ? error.message : 'Unable to delete this event'
       setActionError(message)
     } finally {
       setIsDeleting(false)
@@ -163,7 +163,7 @@ function NotesList({
                         />
                       </>
                     ) : (
-                      <p className="mb-0 text-sm text-slate-700">Quick tag events use the default title “Tagged moment”.</p>
+                      <p className="mb-0 text-sm text-slate-700">Quick tag events use the default title "Tagged moment"</p>
                     )}
 
                     <label htmlFor={`event-time-${event.id}`} className="form-label mb-1 text-slate-700">

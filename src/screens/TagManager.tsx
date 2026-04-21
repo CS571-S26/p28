@@ -31,7 +31,7 @@ function TagManager() {
         }
       } catch (error) {
         if (!isCancelled) {
-          const message = error instanceof Error ? error.message : 'Unable to load global tags.'
+          const message = error instanceof Error ? error.message : 'Unable to load global tags'
           setErrorMessage(message)
         }
       } finally {
@@ -72,9 +72,9 @@ function TagManager() {
       })
       setTags((previousTags) => sortTagsByName([...previousTags, createdTag]))
       setTagName('')
-      setSuccessMessage(`Created "${createdTag.name}" global tag.`)
+      setSuccessMessage(`Created "${createdTag.name}" global tag`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create this tag.'
+      const message = error instanceof Error ? error.message : 'Unable to create this tag'
       setErrorMessage(message)
     } finally {
       setIsSaving(false)
@@ -88,14 +88,14 @@ function TagManager() {
           <div className="rounded-4 border bg-white p-4 p-lg-5 shadow-sm d-flex flex-column gap-4">
             <div>
               <p className="mb-2 text-uppercase text-sm tracking-[0.2em] text-primary">Film Reviewer</p>
-              <h1 className="mb-2 text-3xl font-semibold text-slate-900">Global tags</h1>
+              <h1 className="mb-2 text-3xl font-semibold text-slate-900">Tag Library</h1>
               <p className="mb-0 text-slate-600">
-                Create reusable tags for event notes and quick tagged moments.
+                Create reusable tags for event notes and quick tagged moments
               </p>
             </div>
 
             <section className="rounded-4 border p-3 p-lg-4">
-              <h2 className="h5 mb-3 text-slate-900">Add global tag</h2>
+              <h2 className="h5 mb-3 text-slate-900">Add a global tag</h2>
               <form className="d-flex flex-column gap-3" onSubmit={(event) => { void handleSubmit(event) }}>
                 <TagCreationFields
                   nameInputId="global-tag-name"
@@ -119,7 +119,7 @@ function TagManager() {
               {isLoading ? (
                 <p className="mb-0 text-slate-600">Loading tags...</p>
               ) : tags.length === 0 ? (
-                <p className="mb-0 text-slate-600">No global tags yet.</p>
+                <p className="mb-0 text-slate-600">No global tags yet</p>
               ) : (
                 <div className="d-flex flex-wrap gap-2">
                   {tags.map((tag) => (

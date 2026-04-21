@@ -85,7 +85,7 @@ function NotesTimeline({ events, tagCatalog, currentTime, onJumpTo }: NotesTimel
       {previousEvent ? (
         <NotePreview label="Previous event" event={previousEvent} tagCatalogMap={tagCatalogMap} onJumpTo={onJumpTo} />
       ) : (
-        <p className="mb-0 text-slate-600">No previous event at this time.</p>
+        <p className="mb-0 text-slate-600">No previous event at this time</p>
       )}
 
       {upcomingEvents.map((event, index) => (
@@ -101,7 +101,7 @@ function NotesTimeline({ events, tagCatalog, currentTime, onJumpTo }: NotesTimel
       ))}
 
       {upcomingEvents.length === 0 ? (
-        <p className="mb-0 text-slate-600">No upcoming events.</p>
+        <p className="mb-0 text-slate-600">No upcoming events</p>
       ) : null}
     </section>
   )
