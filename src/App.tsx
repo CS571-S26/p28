@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import Home from './screens/Home'
 import TagManager from './screens/TagManager'
+import TagQueue from './screens/TagQueue.tsx'
 import VideoPlayer from './screens/VideoPlayer'
 import VideoSelector from './screens/VideoSelector'
 
@@ -76,6 +77,20 @@ function App() {
                   Tags
                 </NavLink>
               </li>
+              <li className="nav-item">
+                <NavLink
+                  to="/tag-queue"
+                  className={signedInNavClassName}
+                  aria-disabled={!isSignedIn}
+                  onClick={(event) => {
+                    if (!isSignedIn) {
+                      event.preventDefault()
+                    }
+                  }}
+                >
+                  Tag Queue
+                </NavLink>
+              </li>
             </ul>
             <div className="d-flex align-items-center gap-2">
               <span className="small text-secondary">
@@ -118,6 +133,14 @@ function App() {
           element={(
             <ProtectedRoute isSignedIn={isSignedIn}>
               <VideoPlayer />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/tag-queue"
+          element={(
+            <ProtectedRoute isSignedIn={isSignedIn}>
+              <TagQueue />
             </ProtectedRoute>
           )}
         />

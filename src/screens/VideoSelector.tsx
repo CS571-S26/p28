@@ -223,10 +223,10 @@ function VideoSelector() {
   }
 
   return (
-    <main className="container py-5 grow">
+    <main className="container-fluid px-2 px-lg-3 px-xxl-4 py-4 py-lg-5 grow">
       <section className="row justify-content-center">
-        <div className="col-xl-10">
-          <div className="rounded-4 border bg-white p-4 p-lg-5 shadow-sm">
+        <div className="col-12">
+          <div className="rounded-4 border bg-white p-3 p-lg-4 p-xxl-5 shadow-sm">
             <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
               <div>
                 <p className="mb-2 text-uppercase text-sm tracking-[0.2em] text-primary">Film Reviewer</p>
@@ -262,7 +262,7 @@ function VideoSelector() {
             ) : (
               <div className="row g-3">
                 {videos.map((video) => (
-                  <div key={`${video.id}-${video.title}`} className="col-12 col-sm-6 col-lg-4">
+                  <div key={`${video.id}-${video.title}`} className="col-12 col-sm-6 col-lg-3">
                     <VideoCard
                       video={video}
                       isRemoving={deletingId === video.id}
