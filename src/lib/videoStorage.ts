@@ -1,6 +1,4 @@
-const DB_NAME = 'film-reviewer-db'
-const STORE_NAME = 'video-gallery'
-const DB_VERSION = 2
+import { NOTE_STORE_NAME, openDatabase, VIDEO_STORE_NAME, waitForTransaction } from './indexedDb'
 
 export type StoredVideoRecord = {
   id: string
@@ -11,36 +9,6 @@ export type StoredVideoRecord = {
   createdAt: number
   thumbnailDataUrl: string
   file: File
-}
-
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = window.indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onerror = () => {
-      reject(new Error('Unable to open browser storage.'))
-    }
-
-    request.onupgradeneeded = () => {
-      const database = request.result
-
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME, { keyPath: 'id' })
-      }
-    }
-
-    request.onsuccess = () => {
-      resolve(request.result)
-    }
-  })
-}
-
-function waitForTransaction(transaction: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(new Error('Browser storage transaction failed.'))
-    transaction.onabort = () => reject(new Error('Browser storage transaction was aborted.'))
-  })
 }
 
 type SaveVideoOptions = {
@@ -62,9 +30,9 @@ export async function saveVideoToGallery(file: File, options: SaveVideoOptions =
   }
 
   const database = await openDatabase()
-  const transaction = database.transaction(STORE_NAME, 'readwrite')
+  const transaction = database.transaction(VIDEO_STORE_NAME, 'readwrite')
 
-  transaction.objectStore(STORE_NAME).put(record)
+  transaction.objectStore(VIDEO_STORE_NAME).put(record)
 
   try {
     await waitForTransaction(transaction)
@@ -150,8 +118,8 @@ function normalizeStoredVideoRecord(result: unknown): StoredVideoRecord | null {
 
 export async function listStoredVideos(): Promise<StoredVideoRecord[]> {
   const database = await openDatabase()
-  const transaction = database.transaction(STORE_NAME, 'readonly')
-  const request = transaction.objectStore(STORE_NAME).getAll()
+  const transaction = database.transaction(VIDEO_STORE_NAME, 'readonly')
+  const request = transaction.objectStore(VIDEO_STORE_NAME).getAll()
 
   try {
     const results = await new Promise<unknown[]>((resolve, reject) => {
@@ -172,8 +140,8 @@ export async function listStoredVideos(): Promise<StoredVideoRecord[]> {
 
 export async function getStoredVideoById(videoId: string): Promise<StoredVideoRecord | null> {
   const database = await openDatabase()
-  const transaction = database.transaction(STORE_NAME, 'readonly')
-  const request = transaction.objectStore(STORE_NAME).get(videoId)
+  const transaction = database.transaction(VIDEO_STORE_NAME, 'readonly')
+  const request = transaction.objectStore(VIDEO_STORE_NAME).get(videoId)
 
   try {
     const result = await new Promise<unknown>((resolve, reject) => {
@@ -190,14 +158,40 @@ export async function getStoredVideoById(videoId: string): Promise<StoredVideoRe
 
 export async function removeStoredVideo(videoId: string): Promise<void> {
   const database = await openDatabase()
-  const transaction = database.transaction(STORE_NAME, 'readwrite')
-  transaction.objectStore(STORE_NAME).delete(videoId)
+  const transaction = database.transaction([VIDEO_STORE_NAME, NOTE_STORE_NAME], 'readwrite')
+  const videoStore = transaction.objectStore(VIDEO_STORE_NAME)
+  const noteStore = transaction.objectStore(NOTE_STORE_NAME)
+  videoStore.delete(videoId)
 
   try {
+    await deleteNotesForVideoInStore(noteStore, videoId)
     await waitForTransaction(transaction)
   } finally {
     database.close()
   }
+}
+
+function deleteNotesForVideoInStore(noteStore: IDBObjectStore, videoId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const index = noteStore.index('videoId')
+    const request = index.openCursor(IDBKeyRange.only(videoId))
+
+    request.onerror = () => {
+      reject(new Error('Unable to remove notes for this video.'))
+    }
+
+    request.onsuccess = () => {
+      const cursor = request.result
+
+      if (!cursor) {
+        resolve()
+        return
+      }
+
+      cursor.delete()
+      cursor.continue()
+    }
+  })
 }
 
 export async function updateStoredVideoTitle(videoId: string, title: string): Promise<StoredVideoRecord | null> {
@@ -208,8 +202,8 @@ export async function updateStoredVideoTitle(videoId: string, title: string): Pr
   }
 
   const database = await openDatabase()
-  const transaction = database.transaction(STORE_NAME, 'readwrite')
-  const store = transaction.objectStore(STORE_NAME)
+  const transaction = database.transaction(VIDEO_STORE_NAME, 'readwrite')
+  const store = transaction.objectStore(VIDEO_STORE_NAME)
   const request = store.get(videoId)
 
   try {
@@ -243,8 +237,8 @@ export async function updateStoredVideoThumbnail(
   thumbnailDataUrl: string
 ): Promise<StoredVideoRecord | null> {
   const database = await openDatabase()
-  const transaction = database.transaction(STORE_NAME, 'readwrite')
-  const store = transaction.objectStore(STORE_NAME)
+  const transaction = database.transaction(VIDEO_STORE_NAME, 'readwrite')
+  const store = transaction.objectStore(VIDEO_STORE_NAME)
   const request = store.get(videoId)
 
   try {

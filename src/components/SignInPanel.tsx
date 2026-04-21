@@ -48,8 +48,8 @@ function SignInPanel({ isSignedIn, onSignIn }: SignInPanelProps) {
 
       <p className="mt-3 mb-0 text-sm text-slate-500">
         {isSignedIn
-          ? 'You are signed in. Open Gallery from the navbar.'
-          : 'You must sign in before you can open the video gallery.'}
+          ? 'You are signed in - open Gallery from the navbar'
+          : 'You must sign in before you can open the video gallery'}
       </p>
 
       {isModalOpen ? (
