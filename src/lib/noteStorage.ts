@@ -38,6 +38,8 @@ export type StoredVideoEvent = {
 
 export type StoredVideoNote = StoredVideoEvent
 
+export type TagMatchMode = 'and' | 'or'
+
 type SaveNoteEventInput = {
   videoId: string
   text: string
@@ -66,6 +68,12 @@ type SaveVideoNoteInput = {
 type UpdateVideoNotePatch = {
   text?: string
   timestampSeconds?: number
+}
+
+type ListTaggedMomentsInput = {
+  tagKeys: string[]
+  matchMode?: TagMatchMode
+  videoIds?: string[]
 }
 
 type CreateTagInput = {
@@ -513,6 +521,52 @@ export async function listEventsForVideo(videoId: string): Promise<StoredVideoEv
       .map((value) => normalizeStoredVideoEvent(value))
       .filter((event): event is StoredVideoEvent => event !== null)
     return sortEventsByTimestamp(normalizedEvents)
+  } finally {
+    database.close()
+  }
+}
+
+export async function listTaggedMoments(input: ListTaggedMomentsInput): Promise<StoredVideoEvent[]> {
+  const selectedTagKeys = normalizeTagKeys(input.tagKeys)
+  if (selectedTagKeys.length === 0) {
+    return []
+  }
+
+  const selectedVideoIds = new Set(
+    Array.isArray(input.videoIds)
+      ? input.videoIds.filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : []
+  )
+  const hasVideoScope = selectedVideoIds.size > 0
+  const matchMode: TagMatchMode = input.matchMode === 'or' ? 'or' : 'and'
+
+  const database = await openDatabase()
+  const transaction = database.transaction(NOTE_STORE_NAME, 'readonly')
+  const request = transaction.objectStore(NOTE_STORE_NAME).getAll()
+
+  try {
+    const results = await requestResult<unknown[]>(request, 'Unable to load tagged events.')
+    await waitForTransaction(transaction)
+
+    const normalizedEvents = results
+      .map((value) => normalizeStoredVideoEvent(value))
+      .filter((event): event is StoredVideoEvent => event !== null)
+
+    const filteredEvents = normalizedEvents.filter((event) => {
+      if (event.tagKeys.length === 0) {
+        return false
+      }
+
+      if (hasVideoScope && !selectedVideoIds.has(event.videoId)) {
+        return false
+      }
+
+      return matchMode === 'or'
+        ? selectedTagKeys.some((tagKey) => event.tagKeys.includes(tagKey))
+        : selectedTagKeys.every((tagKey) => event.tagKeys.includes(tagKey))
+    })
+
+    return sortEventsByTimestamp(filteredEvents)
   } finally {
     database.close()
   }
