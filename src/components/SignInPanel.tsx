@@ -29,7 +29,7 @@ function SignInPanel({ isSignedIn, onSignIn }: SignInPanelProps) {
 
     onSignIn()
     closeModal()
-    navigate('/videos')
+    navigate('/')
   }
 
   return (
