@@ -13,6 +13,7 @@ import {
 import NoteComposer, { type NoteComposerHandle } from '../components/NoteComposer'
 import NotesList from '../components/NotesList'
 import NotesNowPlaying from '../components/NotesTimeline'
+import { handleVideoKeyboardShortcut } from '../lib/videoKeyboardSeek'
 
 function formatFileSize(sizeInBytes: number): string {
   const sizeInMegabytes = sizeInBytes / (1024 * 1024)
@@ -225,24 +226,15 @@ function VideoPlayer() {
     ))
   }, [])
 
-  const handleVideoKeyDown = useCallback((event: KeyboardEvent<HTMLVideoElement>) => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
-      return
-    }
-
+  const handleVideoKeyDownCapture = useCallback((event: KeyboardEvent<HTMLVideoElement>) => {
     const videoElement = videoElementRef.current
     if (!videoElement) {
       return
     }
 
-    event.preventDefault()
-
-    const seekOffset = event.key === 'ArrowRight' ? 10 : -10
-    const maxTime = Number.isFinite(videoElement.duration) ? videoElement.duration : Number.POSITIVE_INFINITY
-    const nextTime = Math.max(0, Math.min(videoElement.currentTime + seekOffset, maxTime))
-
-    videoElement.currentTime = nextTime
-    setCurrentTime(Math.floor(nextTime))
+    handleVideoKeyboardShortcut(event, videoElement, (nextTime) => {
+      setCurrentTime(Math.floor(nextTime))
+    })
   }, [])
 
   return (
@@ -286,7 +278,7 @@ function VideoPlayer() {
                           previousTime === roundedSeconds ? previousTime : roundedSeconds
                         ))
                       }}
-                      onKeyDown={handleVideoKeyDown}
+                      onKeyDownCapture={handleVideoKeyDownCapture}
                     >
                       Your browser does not support playing this video
                     </video>

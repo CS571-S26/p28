@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   listTagCatalogEntries,
@@ -9,6 +9,7 @@ import {
 } from '../lib/noteStorage'
 import { formatHms } from '../lib/time'
 import { listStoredVideos, type StoredVideoRecord } from '../lib/videoStorage'
+import { handleVideoKeyboardShortcut } from '../lib/videoKeyboardSeek'
 
 type QueueItem = {
   id: string
@@ -386,6 +387,15 @@ function TagQueue() {
     }
   }
 
+  const handleVideoKeyDownCapture = useCallback((event: KeyboardEvent<HTMLVideoElement>) => {
+    const videoElement = videoRef.current
+    if (!videoElement) {
+      return
+    }
+
+    handleVideoKeyboardShortcut(event, videoElement)
+  }, [])
+
   return (
     <main className="container-fluid px-2 px-lg-3 px-xxl-4 py-4 py-lg-5 grow">
       <section className="row justify-content-center">
@@ -539,6 +549,7 @@ function TagQueue() {
                                 controls
                                 preload="metadata"
                                 src={currentVideoUrl}
+                                onKeyDownCapture={handleVideoKeyDownCapture}
                                 onLoadedMetadata={() => {
                                   if (pendingSeekSeconds === null || !videoRef.current) {
                                     return
