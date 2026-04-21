@@ -1,34 +1,38 @@
 import { useMemo, useState } from 'react'
 import ConfirmDialog from './ConfirmDialog'
-import type { StoredVideoNote } from '../lib/noteStorage'
+import type { StoredTagCatalogEntry, StoredVideoEvent } from '../lib/noteStorage'
 import { formatHms, validateTimestampInput } from '../lib/time'
 
 type EditPatch = {
-  text: string
+  text?: string
   timestampSeconds: number
+  tagKeys?: string[]
 }
 
 type NotesListProps = {
-  notes: StoredVideoNote[]
+  events: StoredVideoEvent[]
+  tagCatalog: StoredTagCatalogEntry[]
   videoDuration: number | null
   onJumpTo: (seconds: number) => void
-  onEdit: (noteId: string, patch: EditPatch) => Promise<void>
-  onDelete: (noteId: string) => Promise<void>
+  onEdit: (eventId: string, patch: EditPatch) => Promise<void>
+  onDelete: (eventId: string) => Promise<void>
   onEmptyStateClick: () => void
 }
 
 function NotesList({
-  notes,
+  events,
+  tagCatalog,
   videoDuration,
   onJumpTo,
   onEdit,
   onDelete,
   onEmptyStateClick
 }: NotesListProps) {
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [editTimestamp, setEditTimestamp] = useState('')
-  const [pendingDeleteNoteId, setPendingDeleteNoteId] = useState<string | null>(null)
+  const [editTagKeys, setEditTagKeys] = useState<string[]>([])
+  const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string | null>(null)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -38,25 +42,40 @@ function NotesList({
     [editTimestamp, videoDuration]
   )
 
-  const notePendingDelete = notes.find((note) => note.id === pendingDeleteNoteId) ?? null
+  const tagMap = useMemo(
+    () => new Map(tagCatalog.map((tag) => [tag.key, tag])),
+    [tagCatalog]
+  )
 
-  function beginEdit(note: StoredVideoNote) {
+  const eventPendingDelete = events.find((event) => event.id === pendingDeleteEventId) ?? null
+
+  function beginEdit(event: StoredVideoEvent) {
     setActionError(null)
-    setEditingNoteId(note.id)
-    setEditText(note.text)
-    setEditTimestamp(formatHms(note.timestampSeconds))
+    setEditingEventId(event.id)
+    setEditText(event.text)
+    setEditTimestamp(formatHms(event.timestampSeconds))
+    setEditTagKeys(event.tagKeys)
   }
 
   function cancelEdit() {
-    setEditingNoteId(null)
+    setEditingEventId(null)
     setEditText('')
     setEditTimestamp('')
+    setEditTagKeys([])
   }
 
-  async function handleSaveEdit(noteId: string) {
+  function toggleEditTag(tagKey: string) {
+    setEditTagKeys((previousTagKeys) => (
+      previousTagKeys.includes(tagKey)
+        ? previousTagKeys.filter((existingTagKey) => existingTagKey !== tagKey)
+        : [...previousTagKeys, tagKey]
+    ))
+  }
+
+  async function handleSaveEdit(eventId: string, eventType: StoredVideoEvent['type']) {
     const trimmedText = editText.trim()
 
-    if (!trimmedText || !editValidation.ok) {
+    if (!editValidation.ok || (eventType === 'note' && !trimmedText)) {
       return
     }
 
@@ -64,13 +83,14 @@ function NotesList({
     setActionError(null)
 
     try {
-      await onEdit(noteId, {
-        text: trimmedText,
-        timestampSeconds: editValidation.seconds
+      await onEdit(eventId, {
+        text: eventType === 'note' ? trimmedText : undefined,
+        timestampSeconds: editValidation.seconds,
+        tagKeys: editTagKeys
       })
       cancelEdit()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update this note.'
+      const message = error instanceof Error ? error.message : 'Unable to update this event.'
       setActionError(message)
     } finally {
       setIsSavingEdit(false)
@@ -78,7 +98,7 @@ function NotesList({
   }
 
   async function handleConfirmDelete() {
-    if (!pendingDeleteNoteId) {
+    if (!pendingDeleteEventId) {
       return
     }
 
@@ -86,13 +106,13 @@ function NotesList({
     setActionError(null)
 
     try {
-      await onDelete(pendingDeleteNoteId)
-      setPendingDeleteNoteId(null)
-      if (editingNoteId === pendingDeleteNoteId) {
+      await onDelete(pendingDeleteEventId)
+      setPendingDeleteEventId(null)
+      if (editingEventId === pendingDeleteEventId) {
         cancelEdit()
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete this note.'
+      const message = error instanceof Error ? error.message : 'Unable to delete this event.'
       setActionError(message)
     } finally {
       setIsDeleting(false)
@@ -102,54 +122,88 @@ function NotesList({
   return (
     <section className="rounded-4 border bg-white p-3 shadow-sm h-100 d-flex flex-column">
       <div className="d-flex align-items-center justify-content-between mb-2">
-        <h2 className="h5 mb-0 text-slate-900">Notes</h2>
+        <h2 className="h5 mb-0 text-slate-900">Event feed</h2>
       </div>
 
-      {notes.length === 0 ? (
+      {events.length === 0 ? (
         <button
           type="button"
           className="btn btn-outline-primary w-100 py-4 mt-2"
           onClick={onEmptyStateClick}
         >
-          No notes yet - click to add your first note
+          No events yet - click to add your first event
         </button>
       ) : (
         <div className="d-flex flex-column gap-2 overflow-auto pe-1" style={{ maxHeight: '28rem' }}>
-          {notes.map((note) => {
-            const isEditing = editingNoteId === note.id
-            const isEditingDisabled = isSavingEdit || !editValidation.ok || editText.trim().length === 0
+          {events.map((event) => {
+            const isEditing = editingEventId === event.id
+            const isEditingDisabled = isSavingEdit
+              || !editValidation.ok
+              || (event.type === 'note' && editText.trim().length === 0)
+            const displayText = event.type === 'tag' ? 'Tagged moment' : event.text
 
             return (
               <article
-                key={note.id}
+                key={event.id}
                 className="border rounded-3 p-2 d-flex flex-column gap-2 bg-light-subtle"
               >
                 {isEditing ? (
                   <>
-                    <label htmlFor={`note-text-${note.id}`} className="form-label mb-1 text-slate-700">
-                      Note text
-                    </label>
-                    <textarea
-                      id={`note-text-${note.id}`}
-                      className="form-control form-control-sm"
-                      rows={2}
-                      value={editText}
-                      onChange={(event) => setEditText(event.target.value)}
-                    />
+                    {event.type === 'note' ? (
+                      <>
+                        <label htmlFor={`event-text-${event.id}`} className="form-label mb-1 text-slate-700">
+                          Event text
+                        </label>
+                        <textarea
+                          id={`event-text-${event.id}`}
+                          className="form-control form-control-sm"
+                          rows={2}
+                          value={editText}
+                          onChange={(changeEvent) => setEditText(changeEvent.target.value)}
+                        />
+                      </>
+                    ) : (
+                      <p className="mb-0 text-sm text-slate-700">Quick tag events use the default title “Tagged moment”.</p>
+                    )}
 
-                    <label htmlFor={`note-time-${note.id}`} className="form-label mb-1 text-slate-700">
+                    <label htmlFor={`event-time-${event.id}`} className="form-label mb-1 text-slate-700">
                       Timestamp
                     </label>
                     <input
-                      id={`note-time-${note.id}`}
+                      id={`event-time-${event.id}`}
                       type="text"
                       className={`form-control form-control-sm ${!editValidation.ok ? 'is-invalid' : ''}`}
                       value={editTimestamp}
-                      onChange={(event) => setEditTimestamp(event.target.value)}
+                      onChange={(changeEvent) => setEditTimestamp(changeEvent.target.value)}
                       aria-invalid={!editValidation.ok}
                     />
                     {!editValidation.ok ? (
                       <div className="invalid-feedback d-block">{editValidation.error}</div>
+                    ) : null}
+
+                    {tagCatalog.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-sm text-slate-700">Tags</p>
+                        <div className="d-flex flex-wrap gap-2">
+                          {tagCatalog.map((tag) => {
+                            const isSelected = editTagKeys.includes(tag.key)
+                            return (
+                              <button
+                                key={tag.key}
+                                type="button"
+                                className={`btn btn-sm ${isSelected ? 'btn-dark' : 'btn-outline-secondary'}`}
+                                onClick={() => toggleEditTag(tag.key)}
+                              >
+                                <span
+                                  className="d-inline-block rounded-circle me-2 align-middle"
+                                  style={{ width: '0.6rem', height: '0.6rem', backgroundColor: tag.color }}
+                                />
+                                {tag.name}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     ) : null}
 
                     <div className="d-flex justify-content-end gap-2">
@@ -165,7 +219,7 @@ function NotesList({
                         type="button"
                         className="btn btn-primary btn-sm"
                         onClick={() => {
-                          void handleSaveEdit(note.id)
+                          void handleSaveEdit(event.id, event.type)
                         }}
                         disabled={isEditingDisabled}
                       >
@@ -178,28 +232,48 @@ function NotesList({
                     <button
                       type="button"
                       className="btn btn-link text-start text-decoration-none p-0 text-reset"
-                      onClick={() => onJumpTo(note.timestampSeconds)}
+                      onClick={() => onJumpTo(event.timestampSeconds)}
                     >
-                      <p className="mb-1 fw-semibold text-primary">{formatHms(note.timestampSeconds)}</p>
-                      <p className="mb-0 text-slate-800">{note.text}</p>
+                      <p className="mb-1 fw-semibold text-primary">{formatHms(event.timestampSeconds)}</p>
+                      <p className="mb-1 text-slate-800">{displayText}</p>
+                      {event.tagKeys.length > 0 ? (
+                        <div className="d-flex flex-wrap gap-1">
+                          {event.tagKeys.map((tagKey) => {
+                            const tag = tagMap.get(tagKey)
+                            const label = tag?.name ?? tagKey
+                            const color = tag?.color ?? '#E5E7EB'
+                            return (
+                              <span
+                                key={`${event.id}-${tagKey}`}
+                                className="px-2 py-1 rounded text-xs border"
+                                style={{ backgroundColor: color, color: '#111111' }}
+                              >
+                                {label}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      ) : null}
                     </button>
                     <div className="d-flex justify-content-end gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          beginEdit(note)
-                        }}
-                      >
-                        Edit
-                      </button>
+                      {event.type === 'note' ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm"
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation()
+                            beginEdit(event)
+                          }}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="btn btn-outline-danger btn-sm"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setPendingDeleteNoteId(note.id)
+                        onClick={(clickEvent) => {
+                          clickEvent.stopPropagation()
+                          setPendingDeleteEventId(event.id)
                         }}
                       >
                         Delete
@@ -220,15 +294,15 @@ function NotesList({
       ) : null}
 
       <ConfirmDialog
-        isOpen={pendingDeleteNoteId !== null}
-        title="Delete note?"
-        message={notePendingDelete ? `Delete the note at ${formatHms(notePendingDelete.timestampSeconds)}?` : 'Delete this note?'}
+        isOpen={pendingDeleteEventId !== null}
+        title="Delete event?"
+        message={eventPendingDelete ? `Delete the event at ${formatHms(eventPendingDelete.timestampSeconds)}?` : 'Delete this event?'}
         confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
         cancelLabel="Cancel"
         variant="danger"
         onCancel={() => {
           if (!isDeleting) {
-            setPendingDeleteNoteId(null)
+            setPendingDeleteEventId(null)
           }
         }}
         onConfirm={() => {

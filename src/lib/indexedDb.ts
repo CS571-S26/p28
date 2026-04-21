@@ -1,8 +1,9 @@
 const DB_NAME = 'film-reviewer-db'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 export const VIDEO_STORE_NAME = 'video-gallery'
 export const NOTE_STORE_NAME = 'video-notes'
+export const TAG_CATALOG_STORE_NAME = 'tag-catalog'
 
 export function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -22,6 +23,10 @@ export function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(NOTE_STORE_NAME)) {
         const noteStore = database.createObjectStore(NOTE_STORE_NAME, { keyPath: 'id' })
         noteStore.createIndex('videoId', 'videoId', { unique: false })
+      }
+
+      if (!database.objectStoreNames.contains(TAG_CATALOG_STORE_NAME)) {
+        database.createObjectStore(TAG_CATALOG_STORE_NAME, { keyPath: 'key' })
       }
     }
 

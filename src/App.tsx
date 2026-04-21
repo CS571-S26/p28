@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
-import Home from './screens/Home.tsx'
-import VideoPlayer from './screens/VideoPlayer.tsx'
-import VideoSelector from './screens/VideoSelector.tsx'
+import Home from './screens/Home'
+import TagManager from './screens/TagManager'
+import VideoPlayer from './screens/VideoPlayer'
+import VideoSelector from './screens/VideoSelector'
 
 type ProtectedRouteProps = {
   isSignedIn: boolean
@@ -21,7 +22,7 @@ function ProtectedRoute({ isSignedIn, children }: ProtectedRouteProps) {
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(false)
 
-  const galleryClassName = isSignedIn
+  const signedInNavClassName = isSignedIn
   ? 'nav-link'
   : 'nav-link disabled text-muted'
 
@@ -50,7 +51,7 @@ function App() {
               <li className="nav-item">
                 <NavLink
                   to="/videos"
-                  className={galleryClassName}
+                  className={signedInNavClassName}
                   aria-disabled={!isSignedIn}
                   onClick={(event) => {
                     if (!isSignedIn) {
@@ -59,6 +60,20 @@ function App() {
                   }}
                 >
                   Gallery
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink
+                  to="/tags"
+                  className={signedInNavClassName}
+                  aria-disabled={!isSignedIn}
+                  onClick={(event) => {
+                    if (!isSignedIn) {
+                      event.preventDefault()
+                    }
+                  }}
+                >
+                  Tags
                 </NavLink>
               </li>
             </ul>
@@ -87,6 +102,14 @@ function App() {
           element={(
             <ProtectedRoute isSignedIn={isSignedIn}>
               <VideoSelector />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/tags"
+          element={(
+            <ProtectedRoute isSignedIn={isSignedIn}>
+              <TagManager />
             </ProtectedRoute>
           )}
         />

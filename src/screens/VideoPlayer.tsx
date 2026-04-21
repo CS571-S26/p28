@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getStoredVideoById, type StoredVideoRecord } from '../lib/videoStorage'
 import {
-  deleteVideoNote,
-  listNotesForVideo,
-  updateVideoNote,
-  type StoredVideoNote
+  createTagCatalogEntry,
+  deleteVideoEvent,
+  listEventsForVideo,
+  listTagCatalogEntries,
+  updateVideoEvent,
+  type StoredTagCatalogEntry,
+  type StoredVideoEvent
 } from '../lib/noteStorage'
 import NoteComposer, { type NoteComposerHandle } from '../components/NoteComposer'
 import NotesList from '../components/NotesList'
@@ -16,13 +19,17 @@ function formatFileSize(sizeInBytes: number): string {
   return `${sizeInMegabytes.toFixed(2)} MB`
 }
 
-function sortNotesByTimestamp(notes: StoredVideoNote[]): StoredVideoNote[] {
-  return [...notes].sort((a, b) => {
+function sortEventsByTimestamp(events: StoredVideoEvent[]): StoredVideoEvent[] {
+  return [...events].sort((a, b) => {
     if (a.timestampSeconds === b.timestampSeconds) {
       return a.createdAt - b.createdAt
     }
     return a.timestampSeconds - b.timestampSeconds
   })
+}
+
+function sortTagCatalog(entries: StoredTagCatalogEntry[]): StoredTagCatalogEntry[] {
+  return [...entries].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 }
 
 function VideoPlayer() {
@@ -31,7 +38,11 @@ function VideoPlayer() {
   const composerRef = useRef<NoteComposerHandle>(null)
   const [videoRecord, setVideoRecord] = useState<StoredVideoRecord | null>(null)
   const [videoUrl, setVideoUrl] = useState('')
-  const [notes, setNotes] = useState<StoredVideoNote[]>([])
+  const [events, setEvents] = useState<StoredVideoEvent[]>([])
+  const [tagCatalog, setTagCatalog] = useState<StoredTagCatalogEntry[]>([])
+  const [selectedFilterTagKeys, setSelectedFilterTagKeys] = useState<string[]>([])
+  const [tagFilterMode, setTagFilterMode] = useState<'or' | 'and'>('or')
+  const [searchText, setSearchText] = useState('')
   const [currentTime, setCurrentTime] = useState(0)
   const [videoDuration, setVideoDuration] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -83,27 +94,32 @@ function VideoPlayer() {
   useEffect(() => {
     let isCancelled = false
 
-    async function loadNotes() {
+    async function loadEventsAndTags() {
       if (!videoId) {
-        setNotes([])
+        setEvents([])
+        setTagCatalog([])
         return
       }
 
       try {
-        const storedNotes = await listNotesForVideo(videoId)
+        const [storedEvents, storedTagCatalog] = await Promise.all([
+          listEventsForVideo(videoId),
+          listTagCatalogEntries()
+        ])
 
         if (!isCancelled) {
-          setNotes(sortNotesByTimestamp(storedNotes))
+          setEvents(sortEventsByTimestamp(storedEvents))
+          setTagCatalog(sortTagCatalog(storedTagCatalog))
         }
       } catch (error) {
         if (!isCancelled) {
-          const message = error instanceof Error ? error.message : 'Unable to load video notes.'
+          const message = error instanceof Error ? error.message : 'Unable to load video events.'
           setErrorMessage(message)
         }
       }
     }
 
-    void loadNotes()
+    void loadEventsAndTags()
 
     return () => {
       isCancelled = true
@@ -149,29 +165,64 @@ function VideoPlayer() {
     composerRef.current?.focus()
   }, [pauseVideo])
 
-  const handleNoteSaved = useCallback((savedNote: StoredVideoNote) => {
-    setNotes((previousNotes) => sortNotesByTimestamp([...previousNotes, savedNote]))
+  const handleEventSaved = useCallback((savedEvent: StoredVideoEvent) => {
+    setEvents((previousEvents) => sortEventsByTimestamp([...previousEvents, savedEvent]))
   }, [])
 
-  const handleEditNote = useCallback(async (
-    noteId: string,
-    patch: { text: string; timestampSeconds: number }
+  const handleEditEvent = useCallback(async (
+    eventId: string,
+    patch: { text?: string; timestampSeconds: number; tagKeys?: string[] }
   ) => {
-    const updatedNote = await updateVideoNote(noteId, patch)
+    const updatedEvent = await updateVideoEvent(eventId, patch)
 
-    if (!updatedNote) {
-      throw new Error('Unable to find this note to update.')
+    if (!updatedEvent) {
+      setEvents((previousEvents) => previousEvents.filter((event) => event.id !== eventId))
+      return
     }
 
-    setNotes((previousNotes) => {
-      const nextNotes = previousNotes.map((note) => (note.id === noteId ? updatedNote : note))
-      return sortNotesByTimestamp(nextNotes)
+    setEvents((previousEvents) => {
+      const nextEvents = previousEvents.map((event) => (event.id === eventId ? updatedEvent : event))
+      return sortEventsByTimestamp(nextEvents)
     })
   }, [])
 
-  const handleDeleteNote = useCallback(async (noteId: string) => {
-    await deleteVideoNote(noteId)
-    setNotes((previousNotes) => previousNotes.filter((note) => note.id !== noteId))
+  const handleDeleteEvent = useCallback(async (eventId: string) => {
+    await deleteVideoEvent(eventId)
+    setEvents((previousEvents) => previousEvents.filter((event) => event.id !== eventId))
+  }, [])
+
+  const handleCreateTag = useCallback(async (name: string, color: StoredTagCatalogEntry['color']) => {
+    const createdTag = await createTagCatalogEntry({ name, color })
+    setTagCatalog((previousTagCatalog) => sortTagCatalog([...previousTagCatalog, createdTag]))
+    return createdTag
+  }, [])
+
+  const visibleEvents = useMemo(() => {
+    const normalizedQuery = searchText.trim().toLowerCase()
+    return events.filter((event) => {
+      const matchesTags = selectedFilterTagKeys.length === 0
+        ? true
+        : (tagFilterMode === 'or'
+          ? selectedFilterTagKeys.some((tagKey) => event.tagKeys.includes(tagKey))
+          : selectedFilterTagKeys.every((tagKey) => event.tagKeys.includes(tagKey)))
+      if (!matchesTags) {
+        return false
+      }
+
+      if (!normalizedQuery) {
+        return true
+      }
+
+      return event.type === 'note' && event.text.toLowerCase().includes(normalizedQuery)
+    })
+  }, [events, searchText, selectedFilterTagKeys, tagFilterMode])
+
+  const toggleFilterTag = useCallback((tagKey: string) => {
+    setSelectedFilterTagKeys((previousTagKeys) => (
+      previousTagKeys.includes(tagKey)
+        ? previousTagKeys.filter((existingTagKey) => existingTagKey !== tagKey)
+        : [...previousTagKeys, tagKey]
+    ))
   }, [])
 
   const handleVideoKeyDown = useCallback((event: KeyboardEvent<HTMLVideoElement>) => {
@@ -204,7 +255,7 @@ function VideoPlayer() {
                 <p className="mb-2 text-uppercase text-sm tracking-[0.2em] text-primary">Film Reviewer</p>
                 <h1 className="mb-2 text-3xl font-semibold text-slate-900">Video player</h1>
                 <p className="mb-0 text-slate-600">
-                  Review a saved clip directly in the browser.
+                  Review a saved clip with an event feed directly in the browser.
                 </p>
               </div>
 
@@ -258,23 +309,74 @@ function VideoPlayer() {
                     videoId={videoRecord.id}
                     getCurrentTime={getCurrentTime}
                     videoDuration={videoDuration}
+                    tagCatalog={tagCatalog}
+                    onCreateTag={handleCreateTag}
                     onStartComposing={handleStartComposing}
-                    onNoteSaved={handleNoteSaved}
+                    onEventSaved={handleEventSaved}
                   />
                 </div>
                 <div className="col-lg-4 d-flex flex-column gap-3">
+                  <section className="rounded-4 border bg-white p-3 shadow-sm d-flex flex-column gap-2">
+                    <h2 className="h6 mb-1 text-slate-900">Event filters</h2>
+                    <input
+                      type="search"
+                      className="form-control form-control-sm"
+                      placeholder="Search note text"
+                      value={searchText}
+                      onChange={(event) => setSearchText(event.target.value)}
+                    />
+                    <div className="d-flex align-items-center gap-2">
+                      <label htmlFor="tag-filter-mode" className="form-label mb-0 text-sm text-slate-700">
+                        Tag match
+                      </label>
+                      <select
+                        id="tag-filter-mode"
+                        className="form-select form-select-sm"
+                        value={tagFilterMode}
+                        onChange={(event) => setTagFilterMode(event.target.value as 'or' | 'and')}
+                      >
+                        <option value="or">Match any (OR)</option>
+                        <option value="and">Match all (AND)</option>
+                      </select>
+                    </div>
+                    {tagCatalog.length > 0 ? (
+                      <div className="d-flex flex-wrap gap-2">
+                        {tagCatalog.map((tag) => {
+                          const isSelected = selectedFilterTagKeys.includes(tag.key)
+                          return (
+                            <button
+                              key={`filter-${tag.key}`}
+                              type="button"
+                              className={`btn btn-sm ${isSelected ? 'btn-dark' : 'btn-outline-secondary'}`}
+                              onClick={() => toggleFilterTag(tag.key)}
+                            >
+                              <span
+                                className="d-inline-block rounded-circle me-2 align-middle"
+                                style={{ width: '0.6rem', height: '0.6rem', backgroundColor: tag.color }}
+                              />
+                              {tag.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mb-0 text-sm text-slate-600">No tags created yet.</p>
+                    )}
+                  </section>
                   <NotesNowPlaying
-                    notes={notes}
+                    events={visibleEvents}
+                    tagCatalog={tagCatalog}
                     currentTime={currentTime}
                     onJumpTo={jumpTo}
                   />
                   <div className="grow">
                     <NotesList
-                      notes={notes}
+                      events={visibleEvents}
+                      tagCatalog={tagCatalog}
                       videoDuration={videoDuration}
                       onJumpTo={jumpTo}
-                      onEdit={handleEditNote}
-                      onDelete={handleDeleteNote}
+                      onEdit={handleEditEvent}
+                      onDelete={handleDeleteEvent}
                       onEmptyStateClick={handleEmptyStateClick}
                     />
                   </div>
