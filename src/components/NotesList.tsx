@@ -201,6 +201,7 @@ function NotesList({
                                 <span
                                   className="d-inline-block rounded-circle me-2 align-middle"
                                   style={{ width: '0.6rem', height: '0.6rem', backgroundColor: tag.color }}
+                                  aria-hidden="true"
                                 />
                                 {tag.name}
                               </button>

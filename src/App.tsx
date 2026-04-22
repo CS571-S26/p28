@@ -23,10 +23,6 @@ function ProtectedRoute({ isSignedIn, children }: ProtectedRouteProps) {
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(false)
 
-  const signedInNavClassName = isSignedIn
-  ? 'nav-link'
-  : 'nav-link disabled text-muted'
-
   function handleSignIn() {
     setIsSignedIn(true)
   }
@@ -50,46 +46,37 @@ function App() {
                 </NavLink>
               </li>
               <li className="nav-item">
-                <NavLink
-                  to="/videos"
-                  className={signedInNavClassName}
-                  aria-disabled={!isSignedIn}
-                  onClick={(event) => {
-                    if (!isSignedIn) {
-                      event.preventDefault()
-                    }
-                  }}
-                >
-                  Gallery
-                </NavLink>
+                {isSignedIn ? (
+                  <NavLink to="/videos" className="nav-link">
+                    Gallery
+                  </NavLink>
+                ) : (
+                  <span className="nav-link text-slate-500" aria-disabled="true">
+                    Gallery
+                  </span>
+                )}
               </li>
               <li className="nav-item">
-                <NavLink
-                  to="/tags"
-                  className={signedInNavClassName}
-                  aria-disabled={!isSignedIn}
-                  onClick={(event) => {
-                    if (!isSignedIn) {
-                      event.preventDefault()
-                    }
-                  }}
-                >
-                  Tags
-                </NavLink>
+                {isSignedIn ? (
+                  <NavLink to="/tags" className="nav-link">
+                    Tags
+                  </NavLink>
+                ) : (
+                  <span className="nav-link text-slate-500" aria-disabled="true">
+                    Tags
+                  </span>
+                )}
               </li>
               <li className="nav-item">
-                <NavLink
-                  to="/tag-queue"
-                  className={signedInNavClassName}
-                  aria-disabled={!isSignedIn}
-                  onClick={(event) => {
-                    if (!isSignedIn) {
-                      event.preventDefault()
-                    }
-                  }}
-                >
-                  Tag Queue
-                </NavLink>
+                {isSignedIn ? (
+                  <NavLink to="/tag-queue" className="nav-link">
+                    Tag Queue
+                  </NavLink>
+                ) : (
+                  <span className="nav-link text-slate-500" aria-disabled="true">
+                    Tag Queue
+                  </span>
+                )}
               </li>
             </ul>
             <div className="d-flex align-items-center gap-2">

@@ -203,11 +203,11 @@ function NoteComposerInner({
         </div>
 
         <div>
-          <p className="form-label mb-2">Tags</p>
+          <p id="composer-tag-group-label" className="form-label mb-2">Tags</p>
           {tagCatalog.length === 0 ? (
             <p className="mb-0 text-sm text-slate-600">Create a global tag to start tagging events</p>
           ) : (
-            <div className="d-flex flex-wrap gap-2">
+            <div className="d-flex flex-wrap gap-2" role="group" aria-labelledby="composer-tag-group-label">
               {tagCatalog.map((tag) => {
                 const isSelected = selectedTagKeys.includes(tag.key)
                 return (
@@ -216,10 +216,12 @@ function NoteComposerInner({
                     type="button"
                     className={`btn btn-sm ${isSelected ? 'btn-dark' : 'btn-outline-secondary'}`}
                     onClick={() => toggleTagSelection(tag.key)}
+                    aria-pressed={isSelected}
                   >
                     <span
                       className="d-inline-block rounded-circle me-2 align-middle"
                       style={{ width: '0.6rem', height: '0.6rem', backgroundColor: tag.color }}
+                      aria-hidden="true"
                     />
                     {tag.name}
                   </button>

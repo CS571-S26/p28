@@ -106,7 +106,7 @@ function Home({ onSignIn, isSignedIn }: HomeProps) {
                           />
                         ) : (
                           <div className="home-thumbnail home-thumbnail-fallback rounded-3 border">
-                            <span className="small text-slate-500">No thumbnail</span>
+                            <span className="small text-slate-700">No thumbnail</span>
                           </div>
                         )}
 
@@ -183,7 +183,7 @@ function Home({ onSignIn, isSignedIn }: HomeProps) {
                               />
                             ) : (
                               <div className="home-activity-thumb home-thumbnail-fallback rounded-2 border">
-                                <span className="small text-slate-500">No thumbnail</span>
+                                <span className="small text-slate-700">No thumbnail</span>
                               </div>
                             )}
                             <p className="mb-1 mt-2 fw-semibold text-slate-900 home-activity-title">{video.title}</p>

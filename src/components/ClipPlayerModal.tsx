@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getVideoClipById } from '../lib/clipStorage'
+import { useModalA11y } from '../lib/useModalA11y.ts'
 
 type ClipPlayerModalProps = {
   clipId: string
@@ -11,9 +12,15 @@ type ClipPlayerModalProps = {
 
 function ClipPlayerModal({ clipId, clipTitle, isOpen, onClose }: ClipPlayerModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [clipUrl, setClipUrl] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const dialogRef = useModalA11y<HTMLDivElement>({
+    isOpen,
+    onClose,
+    initialFocusRef: closeButtonRef
+  })
 
   useEffect(() => {
     if (!isOpen) {
@@ -79,19 +86,25 @@ function ClipPlayerModal({ clipId, clipTitle, isOpen, onClose }: ClipPlayerModal
       role="presentation"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="bg-white rounded-4 border shadow p-3 p-lg-4 w-100 d-flex flex-column gap-3"
         style={{ maxWidth: '60rem' }}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="clip-player-title"
+        aria-describedby="clip-player-description"
       >
         <div className="d-flex justify-content-between align-items-center gap-2">
           <h2 id="clip-player-title" className="h5 mb-0 text-slate-900">{headingText}</h2>
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onClose}>
+          <button ref={closeButtonRef} type="button" className="btn btn-outline-secondary btn-sm" onClick={onClose}>
             Close
           </button>
         </div>
+        <p id="clip-player-description" className="mb-0 text-slate-600">
+          Review the recorded clip and replay it if needed.
+        </p>
 
         {isLoading ? (
           <p className="mb-0 text-slate-600">Loading clip...</p>
@@ -111,7 +124,6 @@ function ClipPlayerModal({ clipId, clipTitle, isOpen, onClose }: ClipPlayerModal
                 className="w-100 h-100"
                 src={clipUrl ?? undefined}
                 controls
-                autoPlay
               >
                 Your browser does not support video playback.
               </video>

@@ -1,7 +1,20 @@
+import type { RefObject } from 'react'
 import { TAG_COLOR_PALETTE } from '../lib/noteStorage'
+
+const TAG_COLOR_NAMES: Record<(typeof TAG_COLOR_PALETTE)[number], string> = {
+  '#FEE2E2': 'Soft red',
+  '#FFEDD5': 'Soft orange',
+  '#FEF3C7': 'Soft yellow',
+  '#DCFCE7': 'Soft green',
+  '#DBEAFE': 'Soft blue',
+  '#EDE9FE': 'Soft purple',
+  '#FCE7F3': 'Soft pink',
+  '#E0F2FE': 'Soft sky blue'
+}
 
 type TagCreationFieldsProps = {
   nameInputId: string
+  nameInputRef?: RefObject<HTMLInputElement | null>
   tagName: string
   selectedColor: (typeof TAG_COLOR_PALETTE)[number]
   previewLabel: string
@@ -11,6 +24,7 @@ type TagCreationFieldsProps = {
 
 function TagCreationFields({
   nameInputId,
+  nameInputRef,
   tagName,
   selectedColor,
   previewLabel,
@@ -23,6 +37,7 @@ function TagCreationFields({
         <label htmlFor={nameInputId} className="form-label">Tag name</label>
         <input
           id={nameInputId}
+          ref={nameInputRef}
           type="text"
           className="form-control"
           value={tagName}
@@ -41,10 +56,13 @@ function TagCreationFields({
                 type="button"
                 className={`btn btn-sm ${isSelected ? 'btn-dark' : 'btn-outline-secondary'}`}
                 onClick={() => onColorChange(color)}
+                aria-label={`Choose ${TAG_COLOR_NAMES[color]} tag color`}
+                aria-pressed={isSelected}
               >
                 <span
                   className="d-inline-block rounded-circle border border-secondary-subtle"
                   style={{ width: '1rem', height: '1rem', backgroundColor: color }}
+                  aria-hidden="true"
                 />
               </button>
             )

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { saveVideoClip } from '../lib/clipStorage'
 import { saveClipEvent, type StoredVideoEvent } from '../lib/noteStorage'
 import { formatHms } from '../lib/time'
+import { useModalA11y } from '../lib/useModalA11y.ts'
 
 type StrokePoint = {
   x: number
@@ -24,6 +25,14 @@ type ClipRecorderModalProps = {
 }
 
 const DRAW_COLORS = ['#EF4444', '#F59E0B', '#22C55E', '#3B82F6', '#FFFFFF', '#111827'] as const
+const DRAW_COLOR_NAMES: Record<(typeof DRAW_COLORS)[number], string> = {
+  '#EF4444': 'Red',
+  '#F59E0B': 'Orange',
+  '#22C55E': 'Green',
+  '#3B82F6': 'Blue',
+  '#FFFFFF': 'White',
+  '#111827': 'Black'
+}
 const DRAWING_FADE_DURATION_MS = 1200
 
 function pickSupportedMimeType(): string | undefined {
@@ -101,6 +110,7 @@ function ClipRecorderModal({
   onEventSaved
 }: ClipRecorderModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null)
   const compositorCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -511,9 +521,20 @@ function ClipRecorderModal({
   }, [clearCaptureResources, recordingStartTimestamp, handleClearDrawing])
 
   const handleModalClose = useCallback(() => {
+    if (mode === 'recording') {
+      const shouldClose = window.confirm('Stop recording and close without saving this clip?')
+      if (!shouldClose) {
+        return
+      }
+    }
     clearCaptureResources()
     onClose()
-  }, [clearCaptureResources, onClose])
+  }, [clearCaptureResources, mode, onClose])
+  const dialogRef = useModalA11y<HTMLDivElement>({
+    isOpen,
+    onClose: handleModalClose,
+    initialFocusRef: closeButtonRef
+  })
 
   const getCanvasPoint = useCallback((event: PointerEvent<HTMLCanvasElement>): StrokePoint | null => {
     const canvas = drawingCanvasRef.current
@@ -540,12 +561,25 @@ function ClipRecorderModal({
         target instanceof HTMLInputElement
         || target instanceof HTMLTextAreaElement
         || target instanceof HTMLSelectElement
+        || target instanceof HTMLButtonElement
+        || target instanceof HTMLAnchorElement
         || (target instanceof HTMLElement && target.isContentEditable)
       ) {
         return
       }
 
-      if (event.key === 'ArrowLeft') {
+      if (event.key === ' ' || event.key === 'Spacebar') {
+        event.preventDefault()
+        const video = videoRef.current
+        if (!video) {
+          return
+        }
+        if (video.paused) {
+          void video.play()
+        } else {
+          video.pause()
+        }
+      } else if (event.key === 'ArrowLeft') {
         event.preventDefault()
         seekToTime((videoRef.current?.currentTime ?? currentVideoTime) - 5)
       } else if (event.key === 'ArrowRight') {
@@ -572,21 +606,24 @@ function ClipRecorderModal({
       role="presentation"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="bg-white rounded-4 border shadow p-3 p-lg-4 w-100 d-flex flex-column gap-3"
         style={{ maxWidth: '72rem', maxHeight: '95vh' }}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="clip-recorder-title"
+        aria-describedby="clip-recorder-description"
       >
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
           <div>
             <h2 id="clip-recorder-title" className="h4 mb-1 text-slate-900">Record clip annotation</h2>
-            <p className="mb-0 text-slate-600">
+            <p id="clip-recorder-description" className="mb-0 text-slate-600">
               Start at {formatHms(recordingStartTimestamp)}. Mic audio only.
             </p>
           </div>
-          <button type="button" className="btn btn-outline-secondary" onClick={handleModalClose}>
+          <button ref={closeButtonRef} type="button" className="btn btn-outline-secondary" onClick={handleModalClose}>
             Close
           </button>
         </div>
@@ -655,7 +692,7 @@ function ClipRecorderModal({
               </video>
               <canvas
                 ref={drawingCanvasRef}
-                className="position-absolute top-0 start-0 w-100 h-100"
+                className="position-absolute top-0 inset-s-0 w-100 h-100"
                 style={{ touchAction: 'none', cursor: 'crosshair' }}
                 onPointerDown={(event) => {
                   if (mode === 'review') {
@@ -748,6 +785,8 @@ function ClipRecorderModal({
                 max={videoDuration || 0}
                 step={0.05}
                 value={clamp(currentVideoTime, 0, videoDuration || 0)}
+                aria-label="Seek video"
+                aria-valuetext={formatElapsed(currentVideoTime * 1000)}
                 onChange={(event) => {
                   const nextValue = Number(event.target.value)
                   seekToTime(nextValue)
@@ -761,10 +800,11 @@ function ClipRecorderModal({
                 <button
                   key={color}
                   type="button"
-                  className={`btn btn-sm border ${selectedColor === color ? 'border-3 border-dark' : 'border-1'}`}
+                  className={`btn btn-sm border ${selectedColor === color ? 'border-3 border-dark' : 'border'}`}
                   style={{ width: '2rem', height: '2rem', backgroundColor: color }}
                   onClick={() => setSelectedColor(color)}
-                  aria-label={`Use color ${color}`}
+                  aria-label={`Use ${DRAW_COLOR_NAMES[color]} color`}
+                  aria-pressed={selectedColor === color}
                 />
               ))}
             </div>

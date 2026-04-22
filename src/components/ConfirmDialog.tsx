@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalA11y } from '../lib/useModalA11y.ts'
 
 type ConfirmDialogProps = {
   isOpen: boolean
@@ -23,39 +24,14 @@ function ConfirmDialog({
   onCancel
 }: ConfirmDialogProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
-  const previousActiveElementRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    previousActiveElementRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null
-
-    const previousBodyOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    const timeoutId = window.setTimeout(() => {
-      confirmButtonRef.current?.focus()
-    }, 0)
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onCancel()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      window.clearTimeout(timeoutId)
-      window.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousBodyOverflow
-      previousActiveElementRef.current?.focus()
-    }
-  }, [isOpen, onCancel])
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
+  const titleId = useId()
+  const messageId = useId()
+  const dialogRef = useModalA11y<HTMLDivElement>({
+    isOpen,
+    onClose: onCancel,
+    initialFocusRef: variant === 'danger' ? cancelButtonRef : confirmButtonRef
+  })
 
   if (!isOpen) {
     return null
@@ -69,19 +45,23 @@ function ConfirmDialog({
       role="presentation"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="bg-white rounded-4 border shadow p-4 w-100"
         style={{ maxWidth: '28rem' }}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
+        aria-labelledby={titleId}
+        aria-describedby={messageId}
       >
-        <h2 id="confirm-dialog-title" className="h5 mb-2 text-slate-900">
+        <h2 id={titleId} className="h5 mb-2 text-slate-900">
           {title}
         </h2>
-        <p className="mb-4 text-slate-600">{message}</p>
+        <p id={messageId} className="mb-4 text-slate-600">{message}</p>
         <div className="d-flex justify-content-end gap-2">
           <button
+            ref={cancelButtonRef}
             type="button"
             className="btn btn-outline-secondary"
             onClick={onCancel}
