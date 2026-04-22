@@ -14,6 +14,7 @@ type NotesListProps = {
   tagCatalog: StoredTagCatalogEntry[]
   videoDuration: number | null
   onJumpTo: (seconds: number) => void
+  onPlayClip: (eventId: string) => void
   onEdit: (eventId: string, patch: EditPatch) => Promise<void>
   onDelete: (eventId: string) => Promise<void>
   onEmptyStateClick: () => void
@@ -24,6 +25,7 @@ function NotesList({
   tagCatalog,
   videoDuration,
   onJumpTo,
+  onPlayClip,
   onEdit,
   onDelete,
   onEmptyStateClick
@@ -140,7 +142,9 @@ function NotesList({
             const isEditingDisabled = isSavingEdit
               || !editValidation.ok
               || (event.type === 'note' && editText.trim().length === 0)
-            const displayText = event.type === 'tag' ? 'Tagged moment' : event.text
+            const displayText = event.type === 'tag'
+              ? 'Tagged moment'
+              : (event.type === 'clip' ? (event.text || 'Recorded clip') : event.text)
 
             return (
               <article
@@ -256,6 +260,18 @@ function NotesList({
                       ) : null}
                     </button>
                     <div className="d-flex justify-content-end gap-2">
+                      {event.type === 'clip' ? (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation()
+                            onPlayClip(event.id)
+                          }}
+                        >
+                          View clip
+                        </button>
+                      ) : null}
                       {event.type === 'note' ? (
                         <button
                           type="button"

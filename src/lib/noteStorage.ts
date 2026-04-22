@@ -26,17 +26,34 @@ export type StoredTagCatalogEntry = {
   updatedAt: number
 }
 
-export type StoredVideoEvent = {
+type StoredVideoEventBase = {
   id: string
   videoId: string
   timestampSeconds: number
-  text: string
   createdAt: number
-  type: 'note' | 'tag'
   tagKeys: string[]
 }
 
-export type StoredVideoNote = StoredVideoEvent
+export type StoredVideoNoteEvent = StoredVideoEventBase & {
+  type: 'note'
+  text: string
+}
+
+export type StoredVideoTagEvent = StoredVideoEventBase & {
+  type: 'tag'
+  text: ''
+}
+
+export type StoredVideoClipEvent = StoredVideoEventBase & {
+  type: 'clip'
+  text: string
+  clipId: string
+  clipDurationSeconds: number
+}
+
+export type StoredVideoEvent = StoredVideoNoteEvent | StoredVideoTagEvent | StoredVideoClipEvent
+
+export type StoredVideoNote = StoredVideoNoteEvent
 
 export type TagMatchMode = 'and' | 'or'
 
@@ -51,6 +68,14 @@ type SaveQuickTagEventInput = {
   videoId: string
   timestampSeconds: number
   tagKeys: string[]
+}
+
+type SaveClipEventInput = {
+  videoId: string
+  timestampSeconds: number
+  clipId: string
+  clipDurationSeconds: number
+  text?: string
 }
 
 type UpdateVideoEventPatch = {
@@ -184,6 +209,8 @@ function normalizeStoredVideoEvent(value: unknown): StoredVideoEvent | null {
     type?: unknown
     tagKeys?: unknown
     tags?: unknown
+    clipId?: unknown
+    clipDurationSeconds?: unknown
   }
 
   if (typeof candidate.id !== 'string' || candidate.id.length === 0) {
@@ -198,8 +225,12 @@ function normalizeStoredVideoEvent(value: unknown): StoredVideoEvent | null {
     return null
   }
 
-  const hasExplicitType = candidate.type === 'note' || candidate.type === 'tag'
-  const eventType: 'note' | 'tag' = candidate.type === 'tag' ? 'tag' : 'note'
+  const hasExplicitType = candidate.type === 'note' || candidate.type === 'tag' || candidate.type === 'clip'
+  const eventType: StoredVideoEvent['type'] = candidate.type === 'tag'
+    ? 'tag'
+    : candidate.type === 'clip'
+      ? 'clip'
+      : 'note'
   const normalizedText = typeof candidate.text === 'string' ? candidate.text.trim() : ''
   if (eventType === 'note' && normalizedText.length === 0) {
     return null
@@ -209,14 +240,46 @@ function normalizeStoredVideoEvent(value: unknown): StoredVideoEvent | null {
     ? normalizeTagKeys(typeof candidate.tagKeys !== 'undefined' ? candidate.tagKeys : candidate.tags)
     : []
 
-  return {
+  const baseEvent: StoredVideoEventBase = {
     id: candidate.id,
     videoId: candidate.videoId,
     timestampSeconds: candidate.timestampSeconds,
-    text: normalizedText,
     createdAt: typeof candidate.createdAt === 'number' ? candidate.createdAt : Date.now(),
-    type: eventType,
     tagKeys
+  }
+
+  if (eventType === 'clip') {
+    if (typeof candidate.clipId !== 'string' || candidate.clipId.length === 0) {
+      return null
+    }
+    if (
+      typeof candidate.clipDurationSeconds !== 'number'
+      || !Number.isFinite(candidate.clipDurationSeconds)
+      || candidate.clipDurationSeconds < 0
+    ) {
+      return null
+    }
+    return {
+      ...baseEvent,
+      type: 'clip',
+      text: normalizedText,
+      clipId: candidate.clipId,
+      clipDurationSeconds: candidate.clipDurationSeconds
+    }
+  }
+
+  if (eventType === 'tag') {
+    return {
+      ...baseEvent,
+      type: 'tag',
+      text: ''
+    }
+  }
+
+  return {
+    ...baseEvent,
+    type: 'note',
+    text: normalizedText
   }
 }
 
@@ -435,7 +498,7 @@ export async function deleteTagCatalogEntry(tagKey: string): Promise<void> {
   }
 }
 
-export async function saveNoteEvent(input: SaveNoteEventInput): Promise<StoredVideoEvent> {
+export async function saveNoteEvent(input: SaveNoteEventInput): Promise<StoredVideoNoteEvent> {
   const text = input.text.trim()
   if (!input.videoId) {
     throw new Error('A video ID is required to save an event.')
@@ -447,7 +510,7 @@ export async function saveNoteEvent(input: SaveNoteEventInput): Promise<StoredVi
     throw new Error('Event timestamp must be zero or greater.')
   }
 
-  const event: StoredVideoEvent = {
+  const event: StoredVideoNoteEvent = {
     id: createEventId(),
     videoId: input.videoId,
     timestampSeconds: input.timestampSeconds,
@@ -469,7 +532,7 @@ export async function saveNoteEvent(input: SaveNoteEventInput): Promise<StoredVi
   }
 }
 
-export async function saveQuickTagEvent(input: SaveQuickTagEventInput): Promise<StoredVideoEvent> {
+export async function saveQuickTagEvent(input: SaveQuickTagEventInput): Promise<StoredVideoTagEvent> {
   if (!input.videoId) {
     throw new Error('A video ID is required to save an event.')
   }
@@ -482,7 +545,7 @@ export async function saveQuickTagEvent(input: SaveQuickTagEventInput): Promise<
     throw new Error('Choose at least one tag.')
   }
 
-  const event: StoredVideoEvent = {
+  const event: StoredVideoTagEvent = {
     id: createEventId(),
     videoId: input.videoId,
     timestampSeconds: input.timestampSeconds,
@@ -490,6 +553,44 @@ export async function saveQuickTagEvent(input: SaveQuickTagEventInput): Promise<
     createdAt: Date.now(),
     type: 'tag',
     tagKeys
+  }
+
+  const database = await openDatabase()
+  const transaction = database.transaction(NOTE_STORE_NAME, 'readwrite')
+  transaction.objectStore(NOTE_STORE_NAME).put(event)
+
+  try {
+    await waitForTransaction(transaction)
+    return event
+  } finally {
+    database.close()
+  }
+}
+
+export async function saveClipEvent(input: SaveClipEventInput): Promise<StoredVideoClipEvent> {
+  if (!input.videoId) {
+    throw new Error('A video ID is required to save an event.')
+  }
+  if (!Number.isFinite(input.timestampSeconds) || input.timestampSeconds < 0) {
+    throw new Error('Event timestamp must be zero or greater.')
+  }
+  if (!input.clipId) {
+    throw new Error('A clip ID is required to save a clip event.')
+  }
+  if (!Number.isFinite(input.clipDurationSeconds) || input.clipDurationSeconds < 0) {
+    throw new Error('Clip duration must be zero or greater.')
+  }
+
+  const event: StoredVideoClipEvent = {
+    id: createEventId(),
+    videoId: input.videoId,
+    timestampSeconds: input.timestampSeconds,
+    text: input.text?.trim() ?? '',
+    createdAt: Date.now(),
+    type: 'clip',
+    tagKeys: [],
+    clipId: input.clipId,
+    clipDurationSeconds: input.clipDurationSeconds
   }
 
   const database = await openDatabase()
@@ -614,12 +715,19 @@ export async function updateVideoEvent(
       return null
     }
 
-    const updatedEvent: StoredVideoEvent = {
-      ...existingEvent,
-      timestampSeconds: nextTimestamp,
-      text: existingEvent.type === 'tag' ? '' : nextText,
-      tagKeys: nextTagKeys
-    }
+    const updatedEvent: StoredVideoEvent = existingEvent.type === 'tag'
+      ? {
+          ...existingEvent,
+          timestampSeconds: nextTimestamp,
+          text: '',
+          tagKeys: nextTagKeys
+        }
+      : {
+          ...existingEvent,
+          timestampSeconds: nextTimestamp,
+          text: nextText,
+          tagKeys: nextTagKeys
+        }
 
     store.put(updatedEvent)
     await waitForTransaction(transaction)
@@ -680,11 +788,13 @@ export async function saveVideoNote(input: SaveVideoNoteInput): Promise<StoredVi
 }
 
 export async function listNotesForVideo(videoId: string): Promise<StoredVideoNote[]> {
-  return listEventsForVideo(videoId)
+  const events = await listEventsForVideo(videoId)
+  return events.filter((event): event is StoredVideoNote => event.type === 'note')
 }
 
 export async function updateVideoNote(noteId: string, patch: UpdateVideoNotePatch): Promise<StoredVideoNote | null> {
-  return updateVideoEvent(noteId, patch)
+  const updatedEvent = await updateVideoEvent(noteId, patch)
+  return updatedEvent?.type === 'note' ? updatedEvent : null
 }
 
 export async function deleteVideoNote(noteId: string): Promise<void> {

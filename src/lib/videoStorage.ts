@@ -1,4 +1,4 @@
-import { NOTE_STORE_NAME, openDatabase, VIDEO_STORE_NAME, waitForTransaction } from './indexedDb'
+import { CLIP_STORE_NAME, NOTE_STORE_NAME, openDatabase, VIDEO_STORE_NAME, waitForTransaction } from './indexedDb'
 
 export type StoredVideoRecord = {
   id: string
@@ -158,13 +158,15 @@ export async function getStoredVideoById(videoId: string): Promise<StoredVideoRe
 
 export async function removeStoredVideo(videoId: string): Promise<void> {
   const database = await openDatabase()
-  const transaction = database.transaction([VIDEO_STORE_NAME, NOTE_STORE_NAME], 'readwrite')
+  const transaction = database.transaction([VIDEO_STORE_NAME, NOTE_STORE_NAME, CLIP_STORE_NAME], 'readwrite')
   const videoStore = transaction.objectStore(VIDEO_STORE_NAME)
   const noteStore = transaction.objectStore(NOTE_STORE_NAME)
+  const clipStore = transaction.objectStore(CLIP_STORE_NAME)
   videoStore.delete(videoId)
 
   try {
     await deleteNotesForVideoInStore(noteStore, videoId)
+    await deleteClipsForVideoInStore(clipStore, videoId)
     await waitForTransaction(transaction)
   } finally {
     database.close()
@@ -178,6 +180,29 @@ function deleteNotesForVideoInStore(noteStore: IDBObjectStore, videoId: string):
 
     request.onerror = () => {
       reject(new Error('Unable to remove notes for this video.'))
+    }
+
+    request.onsuccess = () => {
+      const cursor = request.result
+
+      if (!cursor) {
+        resolve()
+        return
+      }
+
+      cursor.delete()
+      cursor.continue()
+    }
+  })
+}
+
+function deleteClipsForVideoInStore(clipStore: IDBObjectStore, videoId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const index = clipStore.index('videoId')
+    const request = index.openCursor(IDBKeyRange.only(videoId))
+
+    request.onerror = () => {
+      reject(new Error('Unable to remove clips for this video.'))
     }
 
     request.onsuccess = () => {
