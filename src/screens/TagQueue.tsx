@@ -428,8 +428,9 @@ function TagQueue() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-sm text-slate-700">Tag match mode</p>
+                      <label htmlFor="tag-match-mode" className="mb-2 text-sm text-slate-700">Tag match mode</label>
                       <select
+                        id="tag-match-mode"
                         className="form-select form-select-sm"
                         value={tagMatchMode}
                         onChange={(event) => setTagMatchMode(event.target.value as TagMatchMode)}
@@ -440,11 +441,11 @@ function TagQueue() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-sm text-slate-700">Tags</p>
+                      <p id="tag-queue-tags-label" className="mb-2 text-sm text-slate-700">Tags</p>
                       {tagCatalog.length === 0 ? (
                         <p className="mb-0 text-sm text-slate-600">No global tags yet</p>
                       ) : (
-                        <div className="d-flex flex-wrap gap-2">
+                        <div className="d-flex flex-wrap gap-2" role="group" aria-labelledby="tag-queue-tags-label">
                           {tagCatalog.map((tag) => {
                             const isSelected = selectedTagKeys.includes(tag.key)
                             return (

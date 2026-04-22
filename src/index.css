@@ -25,6 +25,11 @@ body {
   background: #f8fafc;
 }
 
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 #root,
 .app {
   min-height: 100vh;

@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { TAG_COLOR_PALETTE } from '../lib/noteStorage'
+import { useModalA11y } from '../lib/useModalA11y.ts'
 import TagCreationFields from './TagCreationFields'
 
 type TagCreationModalProps = {
@@ -28,18 +29,17 @@ function TagCreationModal({
   onClose,
   onCreate
 }: TagCreationModalProps) {
-  useEffect(() => {
-    if (!isOpen) {
-      return
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const handleRequestClose = useCallback(() => {
+    if (!isSaving) {
+      onClose()
     }
-
-    const previousBodyOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow
-    }
-  }, [isOpen])
+  }, [isSaving, onClose])
+  const dialogRef = useModalA11y<HTMLDivElement>({
+    isOpen,
+    onClose: handleRequestClose,
+    initialFocusRef: nameInputRef
+  })
 
   if (!isOpen) {
     return null
@@ -50,13 +50,13 @@ function TagCreationModal({
       className="position-fixed inset-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
       style={{ zIndex: 1080, backgroundColor: 'rgba(15, 23, 42, 0.45)' }}
       onClick={() => {
-        if (!isSaving) {
-          onClose()
-        }
+        handleRequestClose()
       }}
       role="presentation"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="bg-white rounded-4 border shadow p-4 w-100"
         style={{ maxWidth: '34rem' }}
         onClick={(event) => event.stopPropagation()}
@@ -64,10 +64,11 @@ function TagCreationModal({
         aria-modal="true"
         aria-labelledby="create-tag-modal-title"
       >
-        <h3 id="create-tag-modal-title" className="h5 mb-2 text-slate-900">Create global tag</h3>
+        <h2 id="create-tag-modal-title" className="h5 mb-2 text-slate-900">Create global tag</h2>
         <p className="mb-3 text-slate-600">Choose a name and color for this reusable tag</p>
         <TagCreationFields
           nameInputId="create-tag-name-modal"
+          nameInputRef={nameInputRef}
           tagName={tagName}
           selectedColor={selectedColor}
           previewLabel={previewLabel}
@@ -78,7 +79,7 @@ function TagCreationModal({
           <button
             type="button"
             className="btn btn-outline-secondary"
-            onClick={onClose}
+            onClick={handleRequestClose}
             disabled={isSaving}
           >
             Cancel

@@ -58,7 +58,7 @@ function VideoCard({
             style={{ aspectRatio: '16 / 9' }}
           />
         ) : (
-          <div className="w-100 rounded-3 bg-secondary-subtle d-flex align-items-center justify-content-center text-secondary-emphasis" style={{ aspectRatio: '16 / 9' }}>
+          <div className="w-100 rounded-3 bg-slate-100 d-flex align-items-center justify-content-center text-slate-700" style={{ aspectRatio: '16 / 9' }}>
             No preview
           </div>
         )}

@@ -241,6 +241,7 @@ function VideoSelector() {
                   className="btn btn-primary px-4 py-2"
                   onClick={handleUploadClick}
                   disabled={isSaving}
+                  aria-controls="video-upload-input"
                 >
                   {isSaving ? 'Saving video...' : 'Upload video'}
                 </button>
@@ -248,11 +249,13 @@ function VideoSelector() {
             </div>
 
             <input
+              id="video-upload-input"
               ref={inputRef}
               type="file"
               accept="video/mp4"
               className="d-none"
               onChange={handleFileChange}
+              aria-label="Upload MP4 video"
             />
 
             {isLoading ? (

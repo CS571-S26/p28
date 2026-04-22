@@ -349,7 +349,9 @@ function VideoPlayer() {
                 <div className="col-lg-4 d-flex flex-column gap-3">
                   <section className="rounded-4 border bg-white p-3 shadow-sm d-flex flex-column gap-2">
                     <h2 className="h6 mb-1 text-slate-900">Event filters</h2>
+                    <label htmlFor="note-search" className="sr-only">Search note text</label>
                     <input
+                      id="note-search"
                       type="search"
                       className="form-control form-control-sm"
                       placeholder="Search note text"

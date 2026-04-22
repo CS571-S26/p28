@@ -23,7 +23,7 @@ function NotePreview({ label, event, tagCatalogMap, onJumpTo, onPlayClip }: Note
     ? 'Tagged moment'
     : (event.type === 'clip' ? (event.text || 'Recorded clip') : event.text)
   return (
-    <div className="btn btn-outline-secondary text-start w-100 d-flex flex-column align-items-start gap-1">
+    <div className="border rounded-3 bg-white text-start w-100 d-flex flex-column align-items-start gap-1 p-2">
       <button
         type="button"
         className="btn btn-link text-start text-decoration-none p-0 text-reset w-100"
