@@ -7,6 +7,7 @@ type NotesTimelineProps = {
   tagCatalog: StoredTagCatalogEntry[]
   currentTime: number
   onJumpTo: (seconds: number) => void
+  onPlayClip: (eventId: string) => void
 }
 
 type NotePreviewProps = {
@@ -14,19 +15,24 @@ type NotePreviewProps = {
   event: StoredVideoEvent
   tagCatalogMap: Map<string, StoredTagCatalogEntry>
   onJumpTo: (seconds: number) => void
+  onPlayClip: (eventId: string) => void
 }
 
-function NotePreview({ label, event, tagCatalogMap, onJumpTo }: NotePreviewProps) {
-  const displayText = event.type === 'tag' ? 'Tagged moment' : event.text
+function NotePreview({ label, event, tagCatalogMap, onJumpTo, onPlayClip }: NotePreviewProps) {
+  const displayText = event.type === 'tag'
+    ? 'Tagged moment'
+    : (event.type === 'clip' ? (event.text || 'Recorded clip') : event.text)
   return (
-    <button
-      type="button"
-      className="btn btn-outline-secondary text-start w-100 d-flex flex-column align-items-start gap-1"
-      onClick={() => onJumpTo(event.timestampSeconds)}
-    >
-      <span className="text-xs text-uppercase tracking-[0.15em] text-slate-500">{label}</span>
-      <span className="fw-semibold text-slate-900">{formatHms(event.timestampSeconds)}</span>
-      <span className="text-slate-700">{displayText}</span>
+    <div className="btn btn-outline-secondary text-start w-100 d-flex flex-column align-items-start gap-1">
+      <button
+        type="button"
+        className="btn btn-link text-start text-decoration-none p-0 text-reset w-100"
+        onClick={() => onJumpTo(event.timestampSeconds)}
+      >
+        <span className="text-xs text-uppercase tracking-[0.15em] text-slate-500 d-block">{label}</span>
+        <span className="fw-semibold text-slate-900 d-block">{formatHms(event.timestampSeconds)}</span>
+        <span className="text-slate-700 d-block">{displayText}</span>
+      </button>
       {event.tagKeys.length > 0 ? (
         <div className="d-flex flex-wrap gap-1">
           {event.tagKeys.map((tagKey) => {
@@ -45,11 +51,20 @@ function NotePreview({ label, event, tagCatalogMap, onJumpTo }: NotePreviewProps
           })}
         </div>
       ) : null}
-    </button>
+      {event.type === 'clip' ? (
+        <button
+          type="button"
+          className="btn btn-primary btn-sm mt-1"
+          onClick={() => onPlayClip(event.id)}
+        >
+          View clip
+        </button>
+      ) : null}
+    </div>
   )
 }
 
-function NotesTimeline({ events, tagCatalog, currentTime, onJumpTo }: NotesTimelineProps) {
+function NotesTimeline({ events, tagCatalog, currentTime, onJumpTo, onPlayClip }: NotesTimelineProps) {
   const tagCatalogMap = useMemo(
     () => new Map(tagCatalog.map((tag) => [tag.key, tag])),
     [tagCatalog]
@@ -83,7 +98,13 @@ function NotesTimeline({ events, tagCatalog, currentTime, onJumpTo }: NotesTimel
     <section className="rounded-4 border bg-white p-3 shadow-sm d-flex flex-column gap-2">
       <h2 className="h6 mb-1 text-slate-900">Event Timeline</h2>
       {previousEvent ? (
-        <NotePreview label="Previous event" event={previousEvent} tagCatalogMap={tagCatalogMap} onJumpTo={onJumpTo} />
+        <NotePreview
+          label="Previous event"
+          event={previousEvent}
+          tagCatalogMap={tagCatalogMap}
+          onJumpTo={onJumpTo}
+          onPlayClip={onPlayClip}
+        />
       ) : (
         <p className="mb-0 text-slate-600">No previous event at this time</p>
       )}
@@ -97,6 +118,7 @@ function NotesTimeline({ events, tagCatalog, currentTime, onJumpTo }: NotesTimel
           event={event}
           tagCatalogMap={tagCatalogMap}
           onJumpTo={onJumpTo}
+          onPlayClip={onPlayClip}
         />
       ))}
 

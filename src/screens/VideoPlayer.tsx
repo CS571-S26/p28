@@ -10,7 +10,10 @@ import {
   type StoredTagCatalogEntry,
   type StoredVideoEvent
 } from '../lib/noteStorage'
+import { deleteVideoClip } from '../lib/clipStorage'
 import NoteComposer, { type NoteComposerHandle } from '../components/NoteComposer'
+import ClipPlayerModal from '../components/ClipPlayerModal'
+import ClipRecorderModal from '../components/ClipRecorderModal'
 import NotesList from '../components/NotesList'
 import NotesNowPlaying from '../components/NotesTimeline'
 import { handleVideoKeyboardShortcut } from '../lib/videoKeyboardSeek'
@@ -46,6 +49,9 @@ function VideoPlayer() {
   const [searchText, setSearchText] = useState('')
   const [currentTime, setCurrentTime] = useState(0)
   const [videoDuration, setVideoDuration] = useState<number | null>(null)
+  const [isClipRecorderOpen, setIsClipRecorderOpen] = useState(false)
+  const [clipStartTimestamp, setClipStartTimestamp] = useState(0)
+  const [playingClipEventId, setPlayingClipEventId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -188,9 +194,16 @@ function VideoPlayer() {
   }, [])
 
   const handleDeleteEvent = useCallback(async (eventId: string) => {
+    const targetEvent = events.find((event) => event.id === eventId)
+    if (targetEvent?.type === 'clip') {
+      await deleteVideoClip(targetEvent.clipId)
+    }
     await deleteVideoEvent(eventId)
     setEvents((previousEvents) => previousEvents.filter((event) => event.id !== eventId))
-  }, [])
+    if (playingClipEventId === eventId) {
+      setPlayingClipEventId(null)
+    }
+  }, [events, playingClipEventId])
 
   const handleCreateTag = useCallback(async (name: string, color: StoredTagCatalogEntry['color']) => {
     const createdTag = await createTagCatalogEntry({ name, color })
@@ -214,7 +227,8 @@ function VideoPlayer() {
         return true
       }
 
-      return event.type === 'note' && event.text.toLowerCase().includes(normalizedQuery)
+      return (event.type === 'note' || event.type === 'clip')
+        && event.text.toLowerCase().includes(normalizedQuery)
     })
   }, [events, searchText, selectedFilterTagKeys, tagFilterMode])
 
@@ -236,6 +250,25 @@ function VideoPlayer() {
       setCurrentTime(Math.floor(nextTime))
     })
   }, [])
+
+  const handleOpenClipRecorder = useCallback(() => {
+    const nextStartTimestamp = getCurrentTime()
+    setClipStartTimestamp(Math.max(0, nextStartTimestamp))
+    pauseVideo()
+    setIsClipRecorderOpen(true)
+  }, [getCurrentTime, pauseVideo])
+
+  const handlePlayClip = useCallback((eventId: string) => {
+    pauseVideo()
+    setPlayingClipEventId(eventId)
+  }, [pauseVideo])
+
+  const activeClipEvent = useMemo(
+    () => events.find((event): event is Extract<StoredVideoEvent, { type: 'clip' }> => (
+      event.id === playingClipEventId && event.type === 'clip'
+    )) ?? null,
+    [events, playingClipEventId]
+  )
 
   return (
     <main className="container-fluid px-3 px-xl-4 py-5 grow">
@@ -303,6 +336,15 @@ function VideoPlayer() {
                     onStartComposing={handleStartComposing}
                     onEventSaved={handleEventSaved}
                   />
+                  <div className="d-flex justify-content-end">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={handleOpenClipRecorder}
+                    >
+                      Add clip here
+                    </button>
+                  </div>
                 </div>
                 <div className="col-lg-4 d-flex flex-column gap-3">
                   <section className="rounded-4 border bg-white p-3 shadow-sm d-flex flex-column gap-2">
@@ -357,6 +399,7 @@ function VideoPlayer() {
                     tagCatalog={tagCatalog}
                     currentTime={currentTime}
                     onJumpTo={jumpTo}
+                    onPlayClip={handlePlayClip}
                   />
                   <div className="grow">
                     <NotesList
@@ -364,6 +407,7 @@ function VideoPlayer() {
                       tagCatalog={tagCatalog}
                       videoDuration={videoDuration}
                       onJumpTo={jumpTo}
+                      onPlayClip={handlePlayClip}
                       onEdit={handleEditEvent}
                       onDelete={handleDeleteEvent}
                       onEmptyStateClick={handleEmptyStateClick}
@@ -381,6 +425,26 @@ function VideoPlayer() {
               <div className="alert alert-danger mt-4 mb-0" role="alert">
                 {errorMessage}
               </div>
+            ) : null}
+
+            {videoRecord && videoUrl ? (
+              <ClipRecorderModal
+                isOpen={isClipRecorderOpen}
+                videoId={videoRecord.id}
+                videoUrl={videoUrl}
+                initialTimestampSeconds={clipStartTimestamp}
+                onClose={() => setIsClipRecorderOpen(false)}
+                onEventSaved={handleEventSaved}
+              />
+            ) : null}
+
+            {activeClipEvent ? (
+              <ClipPlayerModal
+                clipId={activeClipEvent.clipId}
+                clipTitle={activeClipEvent.text}
+                isOpen={playingClipEventId !== null}
+                onClose={() => setPlayingClipEventId(null)}
+              />
             ) : null}
           </div>
         </div>
