@@ -5,11 +5,23 @@ import { useModalA11y } from '../lib/useModalA11y.ts'
 type SignInPanelProps = {
   isSignedIn: boolean
   onSignIn: () => void
+  isModalOpen: boolean
+  onOpenModal: () => void
+  onCloseModal: () => void
+  requestedNavLabel: string | null
+  requestedNavPath: string | null
 }
 
-function SignInPanel({ isSignedIn, onSignIn }: SignInPanelProps) {
+function SignInPanel({
+  isSignedIn,
+  onSignIn,
+  isModalOpen,
+  onOpenModal,
+  onCloseModal,
+  requestedNavLabel,
+  requestedNavPath
+}: SignInPanelProps) {
   const navigate = useNavigate()
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const usernameInputRef = useRef<HTMLInputElement>(null)
@@ -20,13 +32,16 @@ function SignInPanel({ isSignedIn, onSignIn }: SignInPanelProps) {
     onClose: closeModal,
     initialFocusRef: usernameInputRef
   })
+  const modalHeading = requestedNavLabel
+    ? `Sign in to access ${requestedNavLabel}`
+    : 'Sign in'
 
   function openModal() {
-    setIsModalOpen(true)
+    onOpenModal()
   }
 
   function closeModal() {
-    setIsModalOpen(false)
+    onCloseModal()
   }
 
   function handleSignIn() {
@@ -36,7 +51,7 @@ function SignInPanel({ isSignedIn, onSignIn }: SignInPanelProps) {
 
     onSignIn()
     closeModal()
-    navigate('/')
+    navigate(requestedNavPath ?? '/')
   }
 
   function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
@@ -78,7 +93,7 @@ function SignInPanel({ isSignedIn, onSignIn }: SignInPanelProps) {
               <div className="modal-content">
                 <form onSubmit={handleSubmit}>
                   <div className="modal-header">
-                    <h2 id="sign-in-title" className="modal-title fs-5">Sign in</h2>
+                    <h2 id="sign-in-title" className="modal-title fs-5">{modalHeading}</h2>
                     <button type="button" className="btn-close" aria-label="Close" onClick={closeModal} />
                   </div>
                   <div className="modal-body">

@@ -6,6 +6,11 @@ import { listStoredVideos, type StoredVideoRecord } from '../lib/videoStorage'
 type HomeProps = {
   onSignIn: () => void
   isSignedIn: boolean
+  isSignInModalOpen: boolean
+  onOpenSignInModal: () => void
+  onCloseSignInModal: () => void
+  requestedNavLabel: string | null
+  requestedNavPath: string | null
 }
 
 const RECENT_ACTIVITY_LIMIT = 3
@@ -19,7 +24,15 @@ function formatActivityDate(timestamp: number): string {
   }).format(timestamp)
 }
 
-function Home({ onSignIn, isSignedIn }: HomeProps) {
+function Home({
+  onSignIn,
+  isSignedIn,
+  isSignInModalOpen,
+  onOpenSignInModal,
+  onCloseSignInModal,
+  requestedNavLabel,
+  requestedNavPath
+}: HomeProps) {
   const navigate = useNavigate()
   const [videos, setVideos] = useState<StoredVideoRecord[]>([])
   const [isLoadingActivity, setIsLoadingActivity] = useState(false)
@@ -82,7 +95,15 @@ function Home({ onSignIn, isSignedIn }: HomeProps) {
                   Sign in to open your saved videos and keep your review workflow in one place.
                 </p>
 
-                <SignInPanel isSignedIn={isSignedIn} onSignIn={onSignIn} />
+                <SignInPanel
+                  isSignedIn={isSignedIn}
+                  onSignIn={onSignIn}
+                  isModalOpen={isSignInModalOpen}
+                  onOpenModal={onOpenSignInModal}
+                  onCloseModal={onCloseSignInModal}
+                  requestedNavLabel={requestedNavLabel}
+                  requestedNavPath={requestedNavPath}
+                />
               </section>
             ) : (
               <>
