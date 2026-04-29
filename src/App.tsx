@@ -22,6 +22,9 @@ function ProtectedRoute({ isSignedIn, children }: ProtectedRouteProps) {
 
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(false)
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
+  const [requestedNavLabel, setRequestedNavLabel] = useState<string | null>(null)
+  const [requestedNavPath, setRequestedNavPath] = useState<string | null>(null)
 
   function handleSignIn() {
     setIsSignedIn(true)
@@ -29,6 +32,18 @@ function App() {
 
   function handleSignOut() {
     setIsSignedIn(false)
+  }
+
+  function openSignInModal(label?: string, path?: string) {
+    setRequestedNavLabel(label ?? null)
+    setRequestedNavPath(path ?? null)
+    setIsSignInModalOpen(true)
+  }
+
+  function closeSignInModal() {
+    setIsSignInModalOpen(false)
+    setRequestedNavLabel(null)
+    setRequestedNavPath(null)
   }
 
   return (
@@ -51,9 +66,13 @@ function App() {
                     Gallery
                   </NavLink>
                 ) : (
-                  <span className="nav-link text-slate-500" aria-disabled="true">
+                  <button
+                    type="button"
+                    className="nav-link text-slate-500 bg-transparent border-0"
+                    onClick={() => openSignInModal('Gallery', '/videos')}
+                  >
                     Gallery
-                  </span>
+                  </button>
                 )}
               </li>
               <li className="nav-item">
@@ -62,9 +81,13 @@ function App() {
                     Tags
                   </NavLink>
                 ) : (
-                  <span className="nav-link text-slate-500" aria-disabled="true">
+                  <button
+                    type="button"
+                    className="nav-link text-slate-500 bg-transparent border-0"
+                    onClick={() => openSignInModal('Tags', '/tags')}
+                  >
                     Tags
-                  </span>
+                  </button>
                 )}
               </li>
               <li className="nav-item">
@@ -73,16 +96,17 @@ function App() {
                     Tag Queue
                   </NavLink>
                 ) : (
-                  <span className="nav-link text-slate-500" aria-disabled="true">
+                  <button
+                    type="button"
+                    className="nav-link text-slate-500 bg-transparent border-0"
+                    onClick={() => openSignInModal('Tag Queue', '/tag-queue')}
+                  >
                     Tag Queue
-                  </span>
+                  </button>
                 )}
               </li>
             </ul>
             <div className="d-flex align-items-center gap-2">
-              <span className="small text-secondary">
-                {isSignedIn ? 'Signed in' : 'Signed out'}
-              </span>
               {isSignedIn ? (
                 <button
                   type="button"
@@ -98,7 +122,20 @@ function App() {
       </nav>
 
       <Routes>
-        <Route path="/" element={<Home onSignIn={handleSignIn} isSignedIn={isSignedIn} />} />
+        <Route
+          path="/"
+          element={(
+            <Home
+              onSignIn={handleSignIn}
+              isSignedIn={isSignedIn}
+              isSignInModalOpen={isSignInModalOpen}
+              onOpenSignInModal={() => openSignInModal()}
+              onCloseSignInModal={closeSignInModal}
+              requestedNavLabel={requestedNavLabel}
+              requestedNavPath={requestedNavPath}
+            />
+          )}
+        />
         <Route
           path="/videos"
           element={(
